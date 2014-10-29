@@ -19,4 +19,4 @@ import Model
 -- | Time handling
 
 timeHandler :: Float -> World -> World
-timeHandler time = error "implement Controller.Time.timeHandler!"
+timeHandler time world = world { currentTime = time }
