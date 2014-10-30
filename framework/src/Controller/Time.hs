@@ -17,7 +17,8 @@ timeHandler :: Float -> World -> World
 timeHandler time world@(World {..}) = world { currentTime = time,
                                               heading = newHeading heading rotateAction,
                                               location = newLocation location movementSpeed heading,
-											  backdrop = moveStars (addStar backdrop rndGen)}
+											  backdrop = moveStars (addStar backdrop rndGen),
+											  rndGen   = snd (next rndGen) }
 
 newHeading :: Float -> RotateAction -> Float
 newHeading r RotateLeft  = r - rotateSpeed
@@ -29,8 +30,9 @@ newLocation (x,y) s r = ((sin rad) * s + x, (cos rad) * s + y)
     where rad = r / 360  * (2 * pi)
 
 addStar :: [Particle] -> StdGen -> [Particle]
-addStar x rnd = (Particle white 10 90 2 (100, ypos)) : x
-    where ypos = fst (randomR (-100, 100) rnd)
+addStar x rnd = (Particle white spd (-90) spd (1000, ypos)) : x
+    where ypos = fst (randomR (-1000, 1000) rnd)
+          spd  = fst (randomR (1, 5) (snd (next rnd)))
 
 moveStars :: [Particle] -> [Particle]
 moveStars x = map moveStar x
