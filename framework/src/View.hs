@@ -11,19 +11,12 @@ import Model
 
 -- | Drawing
 
-
-{-- For my own refferance, delete if you, not me, reads this.
-data World = World {
-        -- Random generator
-        rndGen           :: StdGen,
-        -- Event queue
-        rotateAction     :: RotateAction,
-        movementAction   :: MovementAction,
-        shootAction      :: ShootAction
-        -- TODO: add more fields here!
-    }
---}
-
 draw :: Float -> Float -> World -> Picture
 draw horizontalResolution verticalResolution world@(World{..})
-    = Blank --Temp solution
+    = Pictures [Blank, setToPos location heading ship]
+
+ship :: Picture
+ship = Color red (Polygon [(0, 20), (-10, 0), (0, 2), (10, 0)])
+
+setToPos :: Location -> Float -> Picture -> Picture
+setToPos (x, y) r p = Translate x y (Rotate r p)

@@ -20,7 +20,8 @@ data World = World {
         currentTime 		:: Float,
 
         -- SpaceShip book keeping
-		location 			:: Location
+		location 			:: Location,
+		heading             :: Float
     }
 
     
@@ -28,10 +29,10 @@ data RotateAction   = NoRotation | RotateLeft | RotateRight
 data MovementAction = NoMovement | Thrust
 data ShootAction    = Shoot      | DontShoot
 
-type Location 		= (Int, Int)
+type Location 		= (Float, Float)
 
 -- Time is the seed, aswell as the startTime and currentTIme. 
 -- Not really accurate, but for now good enough
 initial :: Int -> World
-initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime (0,0)
+initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime (0,0) 0
 	where floatTime = fromIntegral seed :: Float
