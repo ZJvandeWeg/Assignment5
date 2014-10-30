@@ -26,3 +26,7 @@ starShape size = Circle size
 
 setToPos :: Location -> Float -> Picture -> Picture
 setToPos (x, y) r p = Translate x y (Rotate r p)
+
+--Asteroid Drawing
+asteroid :: Picture
+asteroid = Color green (Circle 8)

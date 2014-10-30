@@ -43,3 +43,49 @@ rotateSpeed = 2
 
 movementSpeed :: Float
 movementSpeed = 2
+
+
+{--
+	Asteroid handling
+--}
+asteroidMovementSpeed :: Float
+asteroidMovementSpeed = 2.1
+
+asteroidRotationSpeed :: Float
+asteroidRotationSpeed = 1.4
+
+moveAsteroid :: World -> Asteroid -> Asteroid
+moveAsteroid world@(World{..}) astr@(Asteroid{..}) = astr { aLocation = newLocation aLocation asteroidMovementSpeed heading'}
+	where heading' = asteroidHeading location astr
+
+asteroidHeading :: Location -> Asteroid -> Float
+asteroidHeading ship ast@(Asteroid {..}) = atan2 diffX diffY
+	where 
+		diffX = fst ship - fst aLocation
+		diffY = snd ship - snd aLocation
+
+addAsteroid :: World -> [Asteroid] -> [Asteroid]
+addAsteroid w@(World{..}) x = newAsteroid rndGen : x
+
+--The init heading is 0, updating a frame later
+newAsteroid :: StdGen -> Asteroid
+newAsteroid rnd = Asteroid { aHeading = 0, aLocation = (initX, initY) }
+	where
+		--TODO tweak the values
+		initX = fst $ randomR (-500, 500) rnd
+		initY = fst $ randomR (-500, 500) (snd (next rnd))
+
+{--
+	Using a bounding sphere collision detection. Our bounding sphere has a radius of 10
+	The asteroids have 8, therefor if our centers are < 18 appart we have a collision.
+	Not <= 18 to correct, just a little, the fact that we are in fact not a sphere/circle
+--}
+detectColision :: World -> [Asteroid] -> Maybe Location
+detectColision w@(World{..}) x = foldr (<||>) Nothing (boundSphere location x)
+
+boundSphere :: Location -> [Asteroid] -> Maybe Asteroid
+boundSphere loc (x:xs) = 
+	--Calculate the center of both objects
+	shipX = fst loc
+	shipY = (+) 10 $ snd loc
+	astrX = 
