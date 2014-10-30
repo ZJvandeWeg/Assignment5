@@ -3,6 +3,8 @@
 module Model where
 
 import System.Random
+import Graphics.Gloss
+
 
 -- | Game state
 
@@ -21,7 +23,10 @@ data World = World {
 
         -- SpaceShip book keeping
 		location 			:: Location,
-		heading             :: Float
+		heading             :: Float,
+		
+		-- Particles and stuff
+		backdrop            :: [Particle]
     }
 
     
@@ -29,10 +34,17 @@ data RotateAction   = NoRotation | RotateLeft | RotateRight
 data MovementAction = NoMovement | Thrust
 data ShootAction    = Shoot      | DontShoot
 
-type Location 		= (Float, Float)
+type Location       = (Float, Float)
+data Particle       = Particle {
+        color    :: Color,
+        size     :: Float,
+        head     :: Float,
+        speed    :: Float,
+        loc      :: Location
+    }
 
 -- Time is the seed, aswell as the startTime and currentTIme. 
 -- Not really accurate, but for now good enough
 initial :: Int -> World
-initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime (0,0) 0
+initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime (0,0) 0 []
 	where floatTime = fromIntegral seed :: Float
