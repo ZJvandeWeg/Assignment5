@@ -13,7 +13,7 @@ import Model
 
 draw :: Float -> Float -> World -> Picture
 draw horizontalResolution verticalResolution world@(World{..})
-    = Pictures ([Blank] ++ drawStars backdrop ++ drawStars bullets ++ [setToPos location heading ship] ++ drawAsteroids asteroids)
+    = Pictures ([Blank] ++ drawDebris debris ++ drawStars backdrop ++ drawStars bullets ++ [setToPos location heading ship] ++ drawAsteroids asteroids)
 
 ship :: Picture
 ship = Color red (Polygon [(0, 20), (-10, 0), (0, 2), (10, 0)])
@@ -32,3 +32,11 @@ drawAsteroids = map drawAsteroid
 
 drawAsteroid :: Asteroid -> Picture
 drawAsteroid a@(Asteroid {..}) = setToPos aLocation aHeading $ Color green (Circle 8)
+
+--Debris drawings
+drawDebris :: [(Location, Float)] -> [Picture]
+drawDebris = map drawDebris'
+  where drawDebris' (l,h) = setToPos l h debrisShape
+
+debrisShape :: Picture
+debrisShape = Color red (Circle 1)
