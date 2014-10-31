@@ -82,10 +82,12 @@ moveAsteroids world@(World{..}) = map moveAsteroid
 		where heading' = asteroidHeading location astr
 
 asteroidHeading :: Location -> Asteroid -> Float
-asteroidHeading ship ast@(Asteroid {..}) = (360/pi) * atan2 diffX diffY --atan2 gives 0 <= value < pi
+asteroidHeading ship ast@(Asteroid {..}) | angleInPi > 0 = angleInPi *360 / (2*pi)
+										 | otherwise = (2*pi + angleInPi) * 360 / (2*pi)
 	where 
 		diffX = fst ship - fst aLocation
 		diffY = snd ship - snd aLocation
+		angleInPi = atan2 diffX diffY --atan2 gives 0 <= value < pi
 
 --Adds an asteroid per 3 seconds
 addAsteroid :: World  -> [Asteroid]
