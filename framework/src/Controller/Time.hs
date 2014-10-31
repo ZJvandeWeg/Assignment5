@@ -64,7 +64,7 @@ rotateSpeed :: Float
 rotateSpeed = 2
 
 movementSpeed :: Float
-movementSpeed = 2
+movementSpeed = 3
 
 
 {--

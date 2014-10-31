@@ -20,6 +20,7 @@ data World = World {
         -- Keep both times for score calculation.
         startTime           :: Float,
         currentTime         :: Float,
+		score               :: Int,
 
         -- SpaceShip book keeping
         location            :: Location,
@@ -55,5 +56,5 @@ data Asteroid 		= Asteroid {
 -- Time is the seed, aswell as the startTime and currentTIme. 
 -- Not really accurate, but for now good enough
 initial :: Int -> World
-initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime (0,0) 0 [] [] []
+initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime 0 (0,0) 0 [] [] []
     where floatTime = fromIntegral seed :: Float
