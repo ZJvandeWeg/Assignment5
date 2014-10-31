@@ -18,7 +18,8 @@ timeHandler time world@(World {..}) = world { currentTime = time,
                                               heading = newHeading heading rotateAction,
                                               location = newLocation location movementSpeed heading,
 											  backdrop = moveStars (addStar backdrop rndGen),
-											  rndGen   = snd (next rndGen) }
+											  rndGen   = snd (next rndGen),
+											  asteroids = moveAsteroids world (addAsteroid world) }
 
 newHeading :: Float -> RotateAction -> Float
 newHeading r RotateLeft  = r - rotateSpeed
@@ -54,18 +55,21 @@ asteroidMovementSpeed = 2.1
 asteroidRotationSpeed :: Float
 asteroidRotationSpeed = 1.4
 
-moveAsteroid :: World -> Asteroid -> Asteroid
-moveAsteroid world@(World{..}) astr@(Asteroid{..}) = astr { aLocation = newLocation aLocation asteroidMovementSpeed heading'}
-	where heading' = asteroidHeading location astr
+moveAsteroids :: World -> [Asteroid] -> [Asteroid]
+moveAsteroids world@(World{..}) = map moveAsteroid 
+	where moveAsteroid astr@(Asteroid{..}) = astr { aLocation = newLocation aLocation asteroidMovementSpeed heading'}
+		where heading' = asteroidHeading location astr
 
 asteroidHeading :: Location -> Asteroid -> Float
-asteroidHeading ship ast@(Asteroid {..}) = atan2 diffX diffY
+asteroidHeading ship ast@(Asteroid {..}) = (360/pi) * atan2 diffX diffY --atan2 gives 0 <= value < pi
 	where 
 		diffX = fst ship - fst aLocation
 		diffY = snd ship - snd aLocation
 
-addAsteroid :: World -> [Asteroid] -> [Asteroid]
-addAsteroid w@(World{..}) x = newAsteroid rndGen : x
+--Adds an asteroid per 3 seconds
+addAsteroid :: World  -> [Asteroid]
+addAsteroid w@(World{..}) 	| mod (round currentTime) 3 == 0 	= (newAsteroid rndGen) : asteroids
+							| otherwise  						= asteroids
 
 --The init heading is 0, updating a frame later
 newAsteroid :: StdGen -> Asteroid
@@ -80,12 +84,21 @@ newAsteroid rnd = Asteroid { aHeading = 0, aLocation = (initX, initY) }
 	The asteroids have 8, therefor if our centers are < 18 appart we have a collision.
 	Not <= 18 to correct, just a little, the fact that we are in fact not a sphere/circle
 --}
-detectColision :: World -> [Asteroid] -> Maybe Location
-detectColision w@(World{..}) x = foldr (<||>) Nothing (boundSphere location x)
 
-boundSphere :: Location -> [Asteroid] -> Maybe Asteroid
-boundSphere loc (x:xs) = 
-	--Calculate the center of both objects
-	shipX = fst loc
-	shipY = (+) 10 $ snd loc
-	astrX = 
+detectColision :: World -> Maybe Location
+detectColision w@(World{..}) = foldr (<||>) Nothing (map (boundSphere location) asteroids)
+
+--For lazy eval
+(<||>) :: Maybe a -> Maybe a -> Maybe a
+Nothing <||> x = x
+x 		<||> _ = x
+
+--If output is Just Location it needs to be translated from the ship
+boundSphere :: Location -> Asteroid -> Maybe Location
+boundSphere loc astr@(Asteroid{..}) | c >= 15 = Nothing
+									| otherwise = Just (explosionLoc)
+	where
+		diffX = fst loc - fst aLocation
+		diffY = (-) (10 + snd loc) $ snd aLocation
+		c 	  = sqrt(diffX^2 + diffY^2) -- c^2 = a^2 + b^2
+		explosionLoc = ((fst loc) + (diffX / 2), (snd loc) + (diffY / 2)) --About where the collision is
