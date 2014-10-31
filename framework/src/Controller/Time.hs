@@ -61,7 +61,7 @@ cleanBullets x = filter clean x
     where clean (Particle {..}) = (fst loc > (-1000) && fst loc < (1000)) && (snd loc > (-1000) && snd loc < 1000)
 
 rotateSpeed :: Float
-rotateSpeed = 2
+rotateSpeed = 4
 
 movementSpeed :: Float
 movementSpeed = 3
@@ -91,8 +91,9 @@ asteroidHeading ship ast@(Asteroid {..}) | angleInPi > 0 = angleInPi *360 / (2*p
 
 --Adds an asteroid per 3 seconds
 addAsteroid :: World  -> [Asteroid]
-addAsteroid w@(World{..}) 	| mod (round currentTime) 3 == 0 	= (newAsteroid rndGen) : asteroids
-							| otherwise  						= asteroids
+addAsteroid w@(World{..})   | (chance rndGen) == 1 = (newAsteroid rndGen) : asteroids
+                            | otherwise             = asteroids
+    where chance rnd = fst (randomR (0 :: Int, 20 :: Int) rnd)
 
 --The init heading is 0, updating a frame later
 newAsteroid :: StdGen -> Asteroid

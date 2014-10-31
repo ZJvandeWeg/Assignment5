@@ -22,7 +22,7 @@ drawStars stars = map drawStar stars
 
 drawStar star@(Particle {..}) = setToPos loc head (Color color (starShape size))
 
-starShape size = Circle size
+starShape size = circleSolid size
 
 setToPos :: Location -> Float -> Picture -> Picture
 setToPos (x, y) r p = Translate x y (Rotate r p)
@@ -31,7 +31,7 @@ setToPos (x, y) r p = Translate x y (Rotate r p)
 drawAsteroids = map drawAsteroid
 
 drawAsteroid :: Asteroid -> Picture
-drawAsteroid a@(Asteroid {..}) = setToPos aLocation aHeading $ Color green (Circle 8)
+drawAsteroid a@(Asteroid {..}) = setToPos aLocation aHeading $ Color green (circleSolid 8)
 
 drawScore :: Int -> Float -> Float -> Picture
-drawScore i x y = Translate (x / 2 - 100) (y / 2 - 50) (Scale 0.2 0.2 (Color white(Text (show i))))
+drawScore i x y = Translate (x / 2 - 200) (y / 2 - 50) (Scale 0.2 0.2 (Color white(Text ("Score: " ++ (show i)))))
