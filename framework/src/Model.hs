@@ -27,7 +27,10 @@ data World = World {
         
         -- Particles and stuff
         backdrop            :: [Particle],
-        bullets             :: [Particle]
+        bullets             :: [Particle],
+
+		asteroids 			:: [Asteroid]
+
     }
 
     
@@ -44,8 +47,13 @@ data Particle       = Particle {
         loc      :: Location
     }
 
+data Asteroid 		= Asteroid {
+		aHeading 	:: Float, 
+		aLocation 	:: Location
+}
+
 -- Time is the seed, aswell as the startTime and currentTIme. 
 -- Not really accurate, but for now good enough
 initial :: Int -> World
-initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime (0,0) 0 [] []
+initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime (0,0) 0 [] [] []
     where floatTime = fromIntegral seed :: Float
