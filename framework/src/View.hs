@@ -13,7 +13,7 @@ import Model
 
 draw :: Float -> Float -> World -> Picture
 draw horizontalResolution verticalResolution world@(World{..})
-    = Pictures ([Blank] ++ drawStars backdrop ++ [setToPos location heading ship])
+    = Pictures ([Blank] ++ drawStars backdrop ++ drawStars bullets ++ [setToPos location heading ship])
 
 ship :: Picture
 ship = Color red (Polygon [(0, 20), (-10, 0), (0, 2), (10, 0)])
