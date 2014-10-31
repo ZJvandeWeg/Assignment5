@@ -10,18 +10,23 @@ import Data.List
 import System.Random
 import Graphics.Gloss
 import Model
+import Data.Maybe
 
 -- | Time handling
 
 timeHandler :: Float -> World -> World
-timeHandler time world@(World {..}) = world { currentTime = time,
-                                              heading = newHeading heading rotateAction,
-                                              location = newLocation location movementSpeed heading,
-											  backdrop = cleanStars   (moveParticles (addStar backdrop rndGen)),
-											  rndGen   = snd (next rndGen),
-											  bullets  = cleanBullets (moveParticles (addBullet bullets shootAction heading location)),
-											  asteroids = moveAsteroids world (addAsteroid world) 
- 											}
+timeHandler time world@(World {..}) |collisionLoc == Nothing = 
+												world { currentTime = time,
+                                              	heading = newHeading heading rotateAction,
+                                              	location = newLocation location movementSpeed heading,
+											  	backdrop = cleanStars   (moveParticles (addStar backdrop rndGen)),
+											  	rndGen   = snd (next rndGen),
+											  	bullets  = cleanBullets (moveParticles (addBullet bullets shootAction heading location)),
+											  	asteroids = moveAsteroids world (addAsteroid world),
+											  	debris = cleanDebris $ moveDebris debris
+ 												}
+ 									| otherwise = initAfterImpact rndGen (fromJust collisionLoc) time
+ 									where collisionLoc = detectCollision world
 
 {- Rotates the ship according to the rotateaction -}
 newHeading :: Float -> RotateAction -> Float
@@ -70,11 +75,16 @@ movementSpeed = 3
 {--
 	Asteroid handling
 --}
+
 asteroidMovementSpeed :: Float
 asteroidMovementSpeed = 2.1
 
 asteroidRotationSpeed :: Float
 asteroidRotationSpeed = 1.4
+
+--Does this work?
+spawnRate :: Int
+spawnRate = 30041
 
 moveAsteroids :: World -> [Asteroid] -> [Asteroid]
 moveAsteroids world@(World{..}) = map moveAsteroid 
@@ -91,8 +101,8 @@ asteroidHeading ship ast@(Asteroid {..}) | angleInPi > 0 = angleInPi *360 / (2*p
 
 --Adds an asteroid per 3 seconds
 addAsteroid :: World  -> [Asteroid]
-addAsteroid w@(World{..}) 	| mod (round currentTime) 3 == 0 	= (newAsteroid rndGen) : asteroids
-							| otherwise  						= asteroids
+addAsteroid w@(World{..}) 	| mod (round currentTime) spawnRate == 0 	= (newAsteroid rndGen) : asteroids
+							| otherwise  								= asteroids
 
 --The init heading is 0, updating a frame later
 newAsteroid :: StdGen -> Asteroid
@@ -108,8 +118,8 @@ newAsteroid rnd = Asteroid { aHeading = 0, aLocation = (initX, initY) }
 	Not <= 18 to correct, just a little, the fact that we are in fact not a sphere/circle
 --}
 
-detectColision :: World -> Maybe Location
-detectColision w@(World{..}) = foldr (<||>) Nothing (map (boundSphere location) asteroids)
+detectCollision :: World -> Maybe Location
+detectCollision w@(World{..}) = foldr (<||>) Nothing (map (boundSphere location) asteroids)
 
 --For lazy eval
 (<||>) :: Maybe a -> Maybe a -> Maybe a
@@ -125,3 +135,16 @@ boundSphere loc astr@(Asteroid{..}) | c >= 15 = Nothing
 		diffY = (-) (10 + snd loc) $ snd aLocation
 		c 	  = sqrt(diffX^2 + diffY^2) -- c^2 = a^2 + b^2
 		explosionLoc = ((fst loc) + (diffX / 2), (snd loc) + (diffY / 2)) --About where the collision is
+
+moveDebris :: [(Location, Float)] -> [(Location, Float)]
+moveDebris = map moveDebris'
+	where moveDebris' (l,h) = (newLocation l debrisSpeed h, h)
+
+-- Not an optimal solution, though real fast. And in the beginning of the game, not much asteroids are there anyway
+cleanDebris :: [(Location, Float)] -> [(Location, Float)]
+cleanDebris d@(x:_) | (snd $ fst x) > 1000 = []
+					| otherwise = d
+cleanDebris _ = []
+
+debrisSpeed :: Float
+debrisSpeed = 5
