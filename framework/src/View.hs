@@ -13,20 +13,23 @@ import Model
 
 draw :: Float -> Float -> World -> Picture
 draw horizontalResolution verticalResolution world@(World{..})
-    = Pictures ([Blank] ++ drawStars backdrop ++ drawStars bullets ++ drawDebris debris ++ drawAsteroids asteroids ++ [setToPos location heading ship] ++ [drawScore score horizontalResolution verticalResolution])
+    = Pictures ([setToPos location heading ship] ++ [drawScore score horizontalResolution verticalResolution] 
+    			++ drawParticles gemShape gems
+    			++ drawParticles bulletShape bullets ++ drawParticles starShape backdrop 
+    			++ drawDebris debris ++ drawAsteroids asteroids)
 
+setToPos :: Location -> Float -> Picture -> Picture
+setToPos (x, y) r p = Translate x y (Rotate r p)
 
 ship :: Picture
 ship = Color red (Polygon [(0, 20), (-10, 0), (0, 2), (10, 0)])
 
-drawStars stars = map drawStar stars
+drawParticle shape p@(Particle {..}) = setToPos loc head (Color color (shape size))
+drawParticles shape = map (drawParticle shape)
 
-drawStar star@(Particle {..}) = setToPos loc head (Color color (starShape size))
-
-starShape size = circleSolid size
-
-setToPos :: Location -> Float -> Picture -> Picture
-setToPos (x, y) r p = Translate x y (Rotate r p)
+gemShape = circle
+starShape = circleSolid
+bulletShape = circleSolid
 
 --Asteroid Drawing
 drawAsteroids = map drawAsteroid

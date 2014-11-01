@@ -58,7 +58,8 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
 											  	rndGen   = snd (next rndGen),
 											  	bullets  = newBullets,
 											  	asteroids = newAsteroids,
-											  	debris = cleanDebris $ moveDebris debris
+											  	debris = cleanDebris $ moveDebris debris,
+											  	gems = newGems
  												}
  									| otherwise = initAfterImpact rndGen (fromJust collisionLoc) time
  									where 
@@ -67,9 +68,11 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
  										moveAndCleanBullets = cleanBullets (moveParticles (addBullet bullets shootAction heading location))
  										moveAndCleanAsteroids = moveAsteroids world (addAsteroid world)
  										bulletsVsAsteroids  = bulletIteration moveAndCleanBullets moveAndCleanAsteroids
- 										-- After hit detection etc 
- 										newBullets = fst bulletsVsAsteroids
+ 										-- After Asteroid hit detection:
  										newAsteroids = snd bulletsVsAsteroids
+
+ 										-- Bullets from after asteroids been shot
+ 										(newBullets, newGems) = shootGems (fst bulletsVsAsteroids) (addGem gems rndGen)
 
 
 {- Rotates the ship according to the rotateaction -}
@@ -134,6 +137,62 @@ inScreen loc = (locX > leftBound && locX < rightBound) && (locY > lowerBound && 
 		locX = fst loc
 		locY = snd loc
 
+spawnObject :: StdGen -> Int -> Bool
+spawnObject rnd i = fst(randomR (0, i) rnd) == 1
+
+{--
+	Gems section
+--}
+addGem :: [Particle] -> StdGen -> [Particle]
+addGem p rnd | spawnObject rnd 80 = newGem rnd : p
+			 | otherwise 		  = p
+
+newGem :: StdGen -> Particle
+newGem rnd = Particle orange 5 0 0 (randomLocation rnd)
+
+{-- 
+	Shoot gems section
+--}
+--			bullets 	  gems 			bullets 	gems
+shootGems :: [Particle] -> [Particle] -> ([Particle], [Particle])
+shootGems [] 	x 	= ([],x)
+shootGems x 	[]	= (x,[])
+shootGems (x:xs) g 	| gemShot 	= hitRecursiveCase
+					| otherwise = normalRecursiveCase
+	where
+		hitRecursiveCase = (fst hitIteration, snd oneBulletCheck)
+		normalRecursiveCase = (x : (fst noHitIteration), snd noHitIteration)
+
+		oneBulletCheck = bulletVsGem x (False, g)
+		gemShot = fst oneBulletCheck
+
+		hitIteration = shootGems xs (snd oneBulletCheck)
+		noHitIteration = shootGems xs g
+
+bulletVsGem :: Particle -> (Bool, [Particle]) -> (Bool, [Particle])
+bulletVsGem _ (False, []) = (False, [])
+bulletVsGem b (_, x:xs)   | distanceLocs bLoc gLoc < 8 = (True, xs)
+						  | otherwise = (fst bulletVsGem', x: (snd bulletVsGem'))
+	where 
+		bulletVsGem' = bulletVsGem b (False, xs)
+		bLoc = particleToLoc b 
+		gLoc = particleToLoc x
+
+--For the situation where multiple locations from particles are needed
+particleToLoc :: Particle -> Location
+particleToLoc p@(Particle{..}) = loc
+
+distanceLocs :: Location -> Location -> Float
+distanceLocs loc1 loc2 = sqrt(diffX^2+diffY^2)
+	where
+		diffX = fst loc1 - fst loc2
+		diffY = snd loc1 - snd loc2
+
+{--
+	Pickup Gems section. 
+--}
+--pickUpGem :: 
+
 {--
 	Asteroid handling
 --}
@@ -153,9 +212,9 @@ asteroidHeading ship ast@(Asteroid {..}) | angleInPi > 0 = angleInPi *360 / (2*p
 
 --Adds an asteroid per 3 seconds
 addAsteroid :: World  -> [Asteroid]
-addAsteroid w@(World{..})   | (chance rndGen) == 1 = (newAsteroid rndGen) : asteroids
+addAsteroid w@(World{..})   | spawnObject rndGen 20 = (newAsteroid rndGen) : asteroids
                             | otherwise             = asteroids
-    where chance rnd = fst (randomR (0 :: Int, 20 :: Int) rnd)
+--    where chance rnd = fst (randomR (0 :: Int, 20 :: Int) rnd)
 
 --The init heading is 0, updating a frame later
 newAsteroid :: StdGen -> Asteroid
@@ -226,13 +285,11 @@ bulletIteration (x:xs) 	 a 		| bulletHitObject = hitRecursiveCase
 -- Hit? -> (True, filtered list) -- Otherwise, we had to filter it, another O(n) operation
 bulletVsAsteroids :: Particle -> (Bool,[Asteroid]) -> (Bool, [Asteroid])
 bulletVsAsteroids _ (False,[])	= (False, [])
-bulletVsAsteroids b (_,x:xs) 	| distanceBulletAsteroid b x < 11 	= (True, xs)
+bulletVsAsteroids b (_,x:xs) 	| distanceLocs bLoc aLoc < 11 	= (True, xs)
 								| otherwise = (fst recursiveCall, x : (snd recursiveCall))
 			where 
 				recursiveCall = bulletVsAsteroids b (False,xs)
+				bLoc = particleToLoc b
+				aLoc = asteroidLoc x
 
-distanceBulletAsteroid :: Particle -> Asteroid -> Float
-distanceBulletAsteroid p@(Particle{..}) a@(Asteroid{..}) = sqrt(diffX^2 + diffY^2)
-	where
-		diffX = fst loc - fst aLocation
-		diffY = snd loc - snd aLocation
+asteroidLoc a@(Asteroid{..}) = aLocation
