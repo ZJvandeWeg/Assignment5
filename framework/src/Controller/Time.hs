@@ -12,6 +12,41 @@ import Graphics.Gloss
 import Model
 import Data.Maybe
 
+-- | Constants
+
+screenHeight :: Float
+screenHeight = 600
+
+screenWidth :: Float
+screenWidth = 1024
+
+leftBound :: Float
+leftBound = rightBound * (-1)
+
+rightBound :: Float
+rightBound = screenWidth / 2
+
+upperBound :: Float
+upperBound = screenHeight / 2
+
+lowerBound :: Float
+lowerBound = upperBound * (-1)
+
+rotateSpeed :: Float
+rotateSpeed = 4
+
+movementSpeed :: Float
+movementSpeed = 3
+
+asteroidMovementSpeed :: Float
+asteroidMovementSpeed = 2.1
+
+asteroidRotationSpeed :: Float
+asteroidRotationSpeed = 1.4
+
+debrisSpeed :: Float
+debrisSpeed = 5
+
 -- | Time handling
 
 timeHandler :: Float -> World -> World
@@ -36,6 +71,7 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
  										newBullets = fst bulletsVsAsteroids
  										newAsteroids = snd bulletsVsAsteroids
 
+
 {- Rotates the ship according to the rotateaction -}
 newHeading :: Float -> RotateAction -> Float
 newHeading r RotateLeft  = r - rotateSpeed
@@ -46,22 +82,30 @@ newHeading r _           = r
 newLocation :: Location -> Float -> Float -> Location
 newLocation (x,y) s r = ((sin rad) * s + x, (cos rad) * s + y)
     where rad = r / 360  * (2 * pi)
-	
+
+randomLocation :: StdGen -> (Float, Float)
+randomLocation rnd = (initX :: Float, initY :: Float)
+	where
+		--TODO tweak the values
+		initX = fst $ randomR (leftBound, rightBound) rnd
+		initY = fst $ randomR (lowerBound, upperBound) (snd (next rnd))
+
+{--
+	When hitting the wall, the ship comes out at the other end. Heading stays the same
+--}
 moveEdges :: Location -> Location
 moveEdges (x, y) = ((xoutbound),(youtbound))
-    where xoutbound | x < width / 2 * (-1) = width / 2
-                    | x > width / 2        = width / 2 * (-1)
-                    | otherwise            = x
-          youtbound | y < height / 2 * (-1) = height / 2
-                    | y > height / 2        = height / 2 * (-1)
-                    | otherwise             = y
-          width  = 800
-          height = 600
+    where xoutbound | x < leftBound 	= rightBound
+                    | x > rightBound    = leftBound
+                    | otherwise        	= x
+          youtbound | y < lowerBound 	= upperBound
+                    | y > upperBound    = lowerBound
+                    | otherwise         = y
 
 {- Add a semi random particle to the list of stars -}
 addStar :: [Particle] -> StdGen -> [Particle]
-addStar x rnd = (Particle white spd (-90) spd (1000, ypos)) : x
-    where ypos = fst (randomR (-1000, 1000) rnd)
+addStar x rnd = (Particle white spd (-90) spd (rightBound + 10, ypos)) : x
+    where ypos = fst (randomR (lowerBound, upperBound) rnd)
           spd  = fst (randomR (1, 5) (snd (next rnd)))
 
 {- Moves all particles in a particle list, can be applied to all types of particles -}
@@ -71,39 +115,28 @@ moveParticles x = map moveParticle x
 
 {- Remove stars that have gone out of scene -}
 cleanStars :: [Particle] -> [Particle]
-cleanStars x = filter clean x
-    where clean (Particle {..}) = fst loc > (-1000)
+cleanStars = filter clean
+    where clean (Particle {..}) = fst loc > leftBound
 
 {- Add a bullet at the position of the ship -}
 addBullet :: [Particle] -> ShootAction -> Float -> Location -> [Particle]
 addBullet x Shoot head loc = (Particle yellow 3 head (3 * movementSpeed) loc) : x
-addBullet x _ _ _          = x
+addBullet x _ 	  _    _   = x
 
 {- Remove bullets that have gone out of scene -}
 cleanBullets :: [Particle] -> [Particle]
-cleanBullets x = filter clean x
-    where clean (Particle {..}) = (fst loc > (-1000) && fst loc < (1000)) && (snd loc > (-1000) && snd loc < 1000)
+cleanBullets = filter clean
+    where clean (Particle {..}) = inScreen loc
 
-rotateSpeed :: Float
-rotateSpeed = 4
-
-movementSpeed :: Float
-movementSpeed = 3
-
+inScreen :: Location -> Bool
+inScreen loc = (locX > leftBound && locX < rightBound) && (locY > lowerBound && locY < upperBound)
+	where 
+		locX = fst loc
+		locY = snd loc
 
 {--
 	Asteroid handling
 --}
-
-asteroidMovementSpeed :: Float
-asteroidMovementSpeed = 2.1
-
-asteroidRotationSpeed :: Float
-asteroidRotationSpeed = 1.4
-
---Does this work?
-spawnRate :: Int
-spawnRate = 30041
 
 moveAsteroids :: World -> [Asteroid] -> [Asteroid]
 moveAsteroids world@(World{..}) = map moveAsteroid 
@@ -126,11 +159,7 @@ addAsteroid w@(World{..})   | (chance rndGen) == 1 = (newAsteroid rndGen) : aste
 
 --The init heading is 0, updating a frame later
 newAsteroid :: StdGen -> Asteroid
-newAsteroid rnd = Asteroid { aHeading = 0, aLocation = (initX, initY) }
-	where
-		--TODO tweak the values
-		initX = fst $ randomR (-500, 500) rnd
-		initY = fst $ randomR (-500, 500) (snd (next rnd))
+newAsteroid rnd = Asteroid { aHeading = 0, aLocation = randomLocation rnd}
 
 {--
 	Using a bounding sphere collision detection. Our bounding sphere has a radius of 10
@@ -160,14 +189,10 @@ moveDebris :: [(Location, Float)] -> [(Location, Float)]
 moveDebris = map moveDebris'
 	where moveDebris' (l,h) = (newLocation l debrisSpeed h, h)
 
--- Not an optimal solution, though real fast. And in the beginning of the game, not much asteroids are there anyway
 cleanDebris :: [(Location, Float)] -> [(Location, Float)]
-cleanDebris d@(x:_) | (snd $ fst x) > 1000 	= []
-					| otherwise 			= d
-cleanDebris _ 								= []
-
-debrisSpeed :: Float
-debrisSpeed = 5
+cleanDebris [] 	= []
+cleanDebris d 	= filter clean d
+	where clean (x, _) = inScreen x
 
 {--
 	Main idea for the section below;
