@@ -59,7 +59,8 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
 											  	bullets  = newBullets,
 											  	asteroids = newAsteroids,
 											  	debris = cleanDebris $ moveDebris debris,
-											  	gems = newGems
+											  	gems = newGems',
+											  	multiplier = newMultipl
  												}
  									| otherwise = initAfterImpact rndGen (fromJust collisionLoc) time
  									where 
@@ -73,6 +74,9 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
 
  										-- Bullets from after asteroids been shot
  										(newBullets, newGems) = shootGems (fst bulletsVsAsteroids) (addGem gems rndGen)
+ 										(upMultipl, newGems') = pickUpGem location newGems
+ 										newMultipl = multiplier + upMultipl
+
 
 
 {- Rotates the ship according to the rotateaction -}
@@ -190,8 +194,11 @@ distanceLocs loc1 loc2 = sqrt(diffX^2+diffY^2)
 
 {--
 	Pickup Gems section. 
---}
---pickUpGem :: 
+							
+			 Ship 			gems 		up   new gems				--}
+pickUpGem :: Location -> [Particle] -> (Int, [Particle])
+pickUpGem s g = (length $ filter isHit g, filter (not . isHit) g)
+	where isHit x = distanceLocs s (particleToLoc x) < 15
 
 {--
 	Asteroid handling
