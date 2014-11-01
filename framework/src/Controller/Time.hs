@@ -18,7 +18,7 @@ timeHandler :: Float -> World -> World
 timeHandler time world@(World {..}) |collisionLoc == Nothing = 
 												world { currentTime = time,
                                               	heading = newHeading heading rotateAction,
-                                              	location = newLocation location movementSpeed heading,
+                                              	location = moveEdges (newLocation location movementSpeed heading),
 											  	backdrop = cleanStars   (moveParticles (addStar backdrop rndGen)),
 											  	rndGen   = snd (next rndGen),
 											  	bullets  = newBullets,
@@ -43,9 +43,20 @@ newHeading r RotateRight = r + rotateSpeed
 newHeading r _           = r
 
 {- Uses speed and heading to calculate an object's new location -}
-newLocation :: Location -> Float -> Float -> Location --location, speed, heading
+newLocation :: Location -> Float -> Float -> Location
 newLocation (x,y) s r = ((sin rad) * s + x, (cos rad) * s + y)
     where rad = r / 360  * (2 * pi)
+	
+moveEdges :: Location -> Location
+moveEdges (x, y) = ((xoutbound),(youtbound))
+    where xoutbound | x < width / 2 * (-1) = width / 2
+                    | x > width / 2        = width / 2 * (-1)
+                    | otherwise            = x
+          youtbound | y < height / 2 * (-1) = height / 2
+                    | y > height / 2        = height / 2 * (-1)
+                    | otherwise             = y
+          width  = 800
+          height = 600
 
 {- Add a semi random particle to the list of stars -}
 addStar :: [Particle] -> StdGen -> [Particle]
