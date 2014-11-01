@@ -21,12 +21,20 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
                                               	location = newLocation location movementSpeed heading,
 											  	backdrop = cleanStars   (moveParticles (addStar backdrop rndGen)),
 											  	rndGen   = snd (next rndGen),
-											  	bullets  = cleanBullets (moveParticles (addBullet bullets shootAction heading location)),
-											  	asteroids = moveAsteroids world (addAsteroid world),
+											  	bullets  = newBullets,
+											  	asteroids = newAsteroids,
 											  	debris = cleanDebris $ moveDebris debris
  												}
  									| otherwise = initAfterImpact rndGen (fromJust collisionLoc) time
- 									where collisionLoc = detectCollision world
+ 									where 
+ 										collisionLoc = detectCollision world
+ 										--First move both the bullets and asteroids, then calculate hits etc
+ 										moveAndCleanBullets = cleanBullets (moveParticles (addBullet bullets shootAction heading location))
+ 										moveAndCleanAsteroids = moveAsteroids world (addAsteroid world)
+ 										bulletsVsAsteroids  = bulletIteration moveAndCleanBullets moveAndCleanAsteroids
+ 										-- After hit detection etc 
+ 										newBullets = fst bulletsVsAsteroids
+ 										newAsteroids = snd bulletsVsAsteroids
 
 {- Rotates the ship according to the rotateaction -}
 newHeading :: Float -> RotateAction -> Float
@@ -143,9 +151,52 @@ moveDebris = map moveDebris'
 
 -- Not an optimal solution, though real fast. And in the beginning of the game, not much asteroids are there anyway
 cleanDebris :: [(Location, Float)] -> [(Location, Float)]
-cleanDebris d@(x:_) | (snd $ fst x) > 1000 = []
-					| otherwise = d
-cleanDebris _ = []
+cleanDebris d@(x:_) | (snd $ fst x) > 1000 	= []
+					| otherwise 			= d
+cleanDebris _ 								= []
 
 debrisSpeed :: Float
 debrisSpeed = 5
+
+{--
+	Main idea for the section below;
+	Per bullet, iterate over all asteroids to remove hit asteroids. 
+	Unlike the executable provided, we only remove one asteroid instead of all it hit? 
+	(At least it seems, you guys did this.)
+	Worked with tuples, to save an extra couple off fitlers, which saves an o(n) operation.
+--}
+
+-- If bulletVsAsteroid tells us we've hit an object, we remove the bullet and the asteroid
+-- else, we check for the next bullet
+bulletIteration :: [Particle] -> [Asteroid] -> ([Particle],[Asteroid])
+bulletIteration [] 		 x 		= ([], x)
+bulletIteration x 		 [] 	= (x, [])
+bulletIteration (x:xs) 	 a 		| bulletHitObject = hitRecursiveCase
+								| otherwise 	  = normalRecursiveCase
+	where
+		hitRecursiveCase = (fst hitIteration, snd oneBulletCheck)
+		normalRecursiveCase = (x: (fst noHitIteration), snd noHitIteration)
+		
+		bulletHitObject = fst oneBulletCheck
+		oneBulletCheck 	= bulletVsAsteroids x (False,a)
+
+		hitIteration = bulletIteration xs (snd oneBulletCheck) 
+		noHitIteration = bulletIteration xs a
+
+
+--For one bullet, iterate over all asteroids. In case of a hit, we remove the asteroid
+-- and return the tail from that moment and concat it with the previous asteroids
+-- else everything is returned as the way it was. 
+-- Hit? -> (True, filtered list) -- Otherwise, we had to filter it, another O(n) operation
+bulletVsAsteroids :: Particle -> (Bool,[Asteroid]) -> (Bool, [Asteroid])
+bulletVsAsteroids _ (False,[])	= (False, [])
+bulletVsAsteroids b (_,x:xs) 	| distanceBulletAsteroid b x < 11 	= (True, xs)
+								| otherwise = (fst recursiveCall, x : (snd recursiveCall))
+			where 
+				recursiveCall = bulletVsAsteroids b (False,xs)
+
+distanceBulletAsteroid :: Particle -> Asteroid -> Float
+distanceBulletAsteroid p@(Particle{..}) a@(Asteroid{..}) = sqrt(diffX^2 + diffY^2)
+	where
+		diffX = fst loc - fst aLocation
+		diffY = snd loc - snd aLocation

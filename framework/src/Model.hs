@@ -69,6 +69,5 @@ initAfterImpact :: StdGen -> Location -> Float -> World
 initAfterImpact gen impactLoc time 
 			= World gen NoRotation Thrust DontShoot time time 0 (0,0) 0 [][][] (createDebris impactLoc)
 
---
 createDebris :: Location -> [(Location, Float)]
 createDebris loc = [(loc, h) | h <- [0..359]]
