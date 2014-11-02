@@ -13,14 +13,15 @@ import Model
 
 draw :: Float -> Float -> World -> Picture
 draw horizontalResolution verticalResolution world@(World{..})
-    = Pictures ([setToPos location heading ship] 
-    			++ [drawScore score horizontalResolution verticalResolution]
-    			++ [drawMulti multiplier]
-    			++ drawParticles gemShape gems
-    			++ drawParticles bulletShape bullets
-    			++ drawDebris debris 
-    			++ drawParticles starShape backdrop 
-    			++ drawAsteroids asteroids)
+    = Pictures (   drawParticles starShape backdrop
+                ++ drawParticles bulletShape bullets
+                ++ drawDebris debris
+                ++ drawParticles gemShape gems
+                ++ drawAsteroids asteroids
+                ++ [setToPos location heading ship]
+                ++ [drawScore score horizontalResolution verticalResolution]
+                ++ [drawMulti multiplier horizontalResolution verticalResolution]
+                )
 
 setToPos :: Location -> Float -> Picture -> Picture
 setToPos (x, y) r p = Translate x y (Rotate r p)
@@ -52,5 +53,5 @@ drawDebris = map drawDebris'
 debrisShape :: Picture
 debrisShape = Color red (Circle 1)
 
-drawMulti :: Int -> Picture
-drawMulti m = setToPos (0,0) 0 (Scale 0.2 0.2 (Color white(Text (show m ++ "X"))))
+drawMulti :: Int -> Float -> Float -> Picture
+drawMulti m x y = setToPos (x / (-2) + 50 , y / 2 - 50) 0 (Scale 0.2 0.2 (Color white(Text (show m ++ "X"))))

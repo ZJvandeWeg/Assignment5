@@ -59,7 +59,7 @@ data Asteroid 		= Asteroid {
 -- Time is the seed, aswell as the startTime and currentTIme. 
 -- Not really accurate, but for now good enough
 initial :: Int -> World
-initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime 0 0 [](0,0) 0 [] [] [] []
+initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime 0 1 [](0,0) 0 [] [] [] []
     where floatTime = fromIntegral seed :: Float
 
 {--
@@ -67,9 +67,9 @@ initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime float
 	location of impact, for debris drawing
 	Impact Time. 
 --}
-initAfterImpact :: StdGen -> Location -> Float -> World
-initAfterImpact gen impactLoc time 
-			= World gen NoRotation Thrust DontShoot time time 0 0 [] (0,0) 0 [][][] (createDebris impactLoc)
+initAfterImpact :: StdGen -> Location -> Float -> Int -> [Particle] -> World
+initAfterImpact gen impactLoc time score stars
+			= World gen NoRotation Thrust DontShoot time time score 1 [] (0,0) 0 stars [][] (createDebris impactLoc)
 
 createDebris :: Location -> [(Location, Float)]
 createDebris loc = [(loc, h) | h <- [0..359]]

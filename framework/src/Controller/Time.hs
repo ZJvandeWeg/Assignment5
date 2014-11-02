@@ -60,20 +60,21 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
 											  	asteroids = newAsteroids,
 											  	debris = cleanDebris $ moveDebris debris,
 											  	gems = newGems',
-											  	multiplier = newMultipl
+											  	multiplier = newMultipl,
+												score = score + multiplier * (snd bulletsVsAsteroids)
  												}
- 									| otherwise = initAfterImpact rndGen (fromJust collisionLoc) time
+ 									| otherwise = initAfterImpact rndGen (fromJust collisionLoc) time score backdrop
  									where 
  										collisionLoc = detectCollision world
  										--First move both the bullets and asteroids, then calculate hits etc
  										moveAndCleanBullets = cleanBullets (moveParticles (addBullet bullets shootAction heading location))
  										moveAndCleanAsteroids = moveAsteroids world (addAsteroid world)
- 										bulletsVsAsteroids  = bulletIteration moveAndCleanBullets moveAndCleanAsteroids
+ 										bulletsVsAsteroids  = bulletIteration moveAndCleanBullets moveAndCleanAsteroids 0
  										-- After Asteroid hit detection:
- 										newAsteroids = snd bulletsVsAsteroids
+ 										newAsteroids = snd (fst bulletsVsAsteroids)
 
  										-- Bullets from after asteroids been shot
- 										(newBullets, newGems) = shootGems (fst bulletsVsAsteroids) (addGem gems rndGen)
+ 										(newBullets, newGems) = shootGems (fst (fst bulletsVsAsteroids)) (addGem gems rndGen)
  										(upMultipl, newGems') = pickUpGem location newGems
  										newMultipl = multiplier + upMultipl
 
@@ -264,26 +265,26 @@ cleanDebris d 	= filter clean d
 	Main idea for the section below;
 	Per bullet, iterate over all asteroids to remove hit asteroids. 
 	Unlike the executable provided, we only remove one asteroid instead of all it hit? 
-	(At least it seems, you guys did this.)
-	Worked with tuples, to save an extra couple off fitlers, which saves an o(n) operation.
+	(At least it seems you guys did this.)
+	Worked with tuples, to save an extra couple off filters, which saves an o(n) operation.
 --}
 
 -- If bulletVsAsteroid tells us we've hit an object, we remove the bullet and the asteroid
 -- else, we check for the next bullet
-bulletIteration :: [Particle] -> [Asteroid] -> ([Particle],[Asteroid])
-bulletIteration [] 		 x 		= ([], x)
-bulletIteration x 		 [] 	= (x, [])
-bulletIteration (x:xs) 	 a 		| bulletHitObject = hitRecursiveCase
+bulletIteration :: [Particle] -> [Asteroid] -> Int -> (([Particle],[Asteroid]), Int)
+bulletIteration [] 		 x 	  s = (([], x), s)
+bulletIteration x 		 []   s = ((x, []), s)
+bulletIteration (x:xs) 	 a 	  s | bulletHitObject = hitRecursiveCase
 								| otherwise 	  = normalRecursiveCase
 	where
-		hitRecursiveCase = (fst hitIteration, snd oneBulletCheck)
-		normalRecursiveCase = (x: (fst noHitIteration), snd noHitIteration)
+		hitRecursiveCase = ((fst (fst hitIteration), snd oneBulletCheck), snd hitIteration + 1)
+		normalRecursiveCase = ((x: (fst (fst noHitIteration)), snd (fst noHitIteration)), snd noHitIteration)
 		
 		bulletHitObject = fst oneBulletCheck
 		oneBulletCheck 	= bulletVsAsteroids x (False,a)
 
-		hitIteration = bulletIteration xs (snd oneBulletCheck) 
-		noHitIteration = bulletIteration xs a
+		hitIteration = bulletIteration xs (snd oneBulletCheck) s
+		noHitIteration = bulletIteration xs a s
 
 
 --For one bullet, iterate over all asteroids. In case of a hit, we remove the asteroid
