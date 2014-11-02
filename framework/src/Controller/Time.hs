@@ -53,12 +53,13 @@ timeHandler :: Float -> World -> World
 timeHandler time world@(World {..}) |collisionLoc == Nothing = 
 												world { currentTime = time,
                                               	heading = newHeading heading rotateAction,
-                                              	location = moveEdges (newLocation location movementSpeed heading),
+                                              	location = newShipLocation movementAction,
 											  	backdrop = cleanStars   (moveParticles (addStar backdrop rndGen)),
 											  	rndGen   = snd (next rndGen),
 											  	bullets  = newBullets,
 											  	asteroids = newAsteroids,
 											  	debris = cleanDebris $ moveDebris debris,
+												trail = cleanDebris (ageTrail (addTrail trail location heading)),
 											  	gems = newGems',
 											  	multiplier = newMultipl,
 												score = score + multiplier * (snd bulletsVsAsteroids)
@@ -77,6 +78,8 @@ timeHandler time world@(World {..}) |collisionLoc == Nothing =
  										(newBullets, newGems) = shootGems (fst (fst bulletsVsAsteroids)) (addGem gems rndGen)
  										(upMultipl, newGems') = pickUpGem location newGems
  										newMultipl = multiplier + upMultipl
+										newShipLocation NoMovement = moveEdges (newLocation location movementSpeed heading)
+										newShipLocation Thrust     = moveEdges (newLocation location (movementSpeed * 2) heading)
 
 
 
@@ -153,7 +156,7 @@ addGem p rnd | spawnObject rnd 80 = newGem rnd : p
 			 | otherwise 		  = p
 
 newGem :: StdGen -> Particle
-newGem rnd = Particle orange 5 0 0 (randomLocation rnd)
+newGem rnd = Particle orange 8 0 0 (randomLocation rnd)
 
 {-- 
 	Shoot gems section
@@ -252,14 +255,21 @@ boundSphere loc astr@(Asteroid{..}) | c >= 15 = Nothing
 		c 	  = sqrt(diffX^2 + diffY^2) -- c^2 = a^2 + b^2
 		explosionLoc = ((fst loc) + (diffX / 2), (snd loc) + (diffY / 2)) --About where the collision is
 
-moveDebris :: [(Location, Float)] -> [(Location, Float)]
+moveDebris :: [Debris] -> [Debris]
 moveDebris = map moveDebris'
-	where moveDebris' (l,h) = (newLocation l debrisSpeed h, h)
+	where moveDebris' debris@(Debris{..}) = debris {dLocation = newLocation dLocation debrisSpeed dHeading}
+													
+ageTrail :: [Debris] -> [Debris]
+ageTrail = map ageTrail'
+	where ageTrail' debris@(Debris{..}) = debris {dAge = dAge + 1}
 
-cleanDebris :: [(Location, Float)] -> [(Location, Float)]
+cleanDebris :: [Debris] -> [Debris]
 cleanDebris [] 	= []
-cleanDebris d 	= filter clean d
-	where clean (x, _) = inScreen x
+cleanDebris x = filter clean x
+	where clean debris@(Debris{..}) = inScreen dLocation && dAge < 120
+	
+addTrail :: [Debris] -> Location -> Float -> [Debris]
+addTrail d l h = (Debris l (h + 180) 0) : d
 
 {--
 	Main idea for the section below;

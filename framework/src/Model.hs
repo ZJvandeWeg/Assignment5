@@ -34,7 +34,8 @@ data World = World {
 		asteroids 			:: [Asteroid],
 
 		--Impact Debris book keeping
-		debris 		 		:: [(Location, Float)] --Location and heading
+		debris 		 		:: [Debris],
+		trail               :: [Debris]
     }
 
     
@@ -44,22 +45,28 @@ data ShootAction    = Shoot      | DontShoot
 
 type Location       = (Float, Float)
 data Particle       = Particle {
-        color    :: Color,
-        size     :: Float,
-        head     :: Float,
-        speed    :: Float,
-        loc      :: Location
+        color      :: Color,
+        size       :: Float,
+        head       :: Float,
+        speed      :: Float,
+        loc        :: Location
     }
 
 data Asteroid 		= Asteroid {
-		aHeading 	:: Float, 
-		aLocation 	:: Location
+		aHeading   :: Float, 
+		aLocation  :: Location
 }
+
+data Debris         = Debris {
+        dLocation  :: Location,
+        dHeading   :: Float,
+        dAge       :: Int
+    }
 
 -- Time is the seed, aswell as the startTime and currentTIme. 
 -- Not really accurate, but for now good enough
 initial :: Int -> World
-initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime floatTime 0 1 [](0,0) 0 [] [] [] []
+initial seed = World (mkStdGen seed) NoRotation NoMovement DontShoot floatTime floatTime 0 1 [](0,0) 0 [] [] [] [] []
     where floatTime = fromIntegral seed :: Float
 
 {--
@@ -69,7 +76,7 @@ initial seed = World (mkStdGen seed) NoRotation Thrust DontShoot floatTime float
 --}
 initAfterImpact :: StdGen -> Location -> Float -> Int -> [Particle] -> World
 initAfterImpact gen impactLoc time score stars
-			= World gen NoRotation Thrust DontShoot time time score 1 [] (0,0) 0 stars [][] (createDebris impactLoc)
+			= World gen NoRotation NoMovement DontShoot time time score 1 [] (0,0) 0 stars [][] (createDebris impactLoc) []
 
-createDebris :: Location -> [(Location, Float)]
-createDebris loc = [(loc, h) | h <- [0..359]]
+createDebris :: Location -> [Debris]
+createDebris loc = [(Debris loc h 0) | h <- [0..359]]

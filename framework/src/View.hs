@@ -16,6 +16,7 @@ draw horizontalResolution verticalResolution world@(World{..})
     = Pictures (   drawParticles starShape backdrop
                 ++ drawParticles bulletShape bullets
                 ++ drawDebris debris
+				++ drawDebris trail
                 ++ drawParticles gemShape gems
                 ++ drawAsteroids asteroids
                 ++ [setToPos location heading ship]
@@ -32,7 +33,7 @@ ship = Color red (Polygon [(0, 20), (-10, 0), (0, 2), (10, 0)])
 drawParticle shape p@(Particle {..}) = setToPos loc head (Color color (shape size))
 drawParticles shape = map (drawParticle shape)
 
-gemShape = circle
+gemShape = circleSolid
 starShape = circleSolid
 bulletShape = circleSolid
 
@@ -46,12 +47,12 @@ drawScore :: Int -> Float -> Float -> Picture
 drawScore i x y = Translate (x / 2 - 150) (y / 2 - 50) (Scale 0.2 0.2 (Color white(Text ("Score: " ++ (show i)))))
 
 --Debris drawings
-drawDebris :: [(Location, Float)] -> [Picture]
+drawDebris :: [Debris] -> [Picture]
 drawDebris = map drawDebris'
-  where drawDebris' (l,h) = setToPos l h debrisShape
+  where drawDebris' debris@(Debris{..}) = setToPos dLocation dHeading debrisShape
 
 debrisShape :: Picture
-debrisShape = Color red (Circle 1)
+debrisShape = Color red (circleSolid 2)
 
 drawMulti :: Int -> Float -> Float -> Picture
 drawMulti m x y = setToPos (x / (-2) + 50 , y / 2 - 50) 0 (Scale 0.2 0.2 (Color white(Text (show m ++ "X"))))
